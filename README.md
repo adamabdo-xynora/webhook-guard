@@ -1,6 +1,6 @@
 # webhook-guard
 
-[![CI](https://github.com/adamabdo7474-pixel/webhook-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/adamabdo7474-pixel/webhook-guard/actions/workflows/ci.yml)
+[![CI](https://github.com/adamabdo-xynora/webhook-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/adamabdo-xynora/webhook-guard/actions/workflows/ci.yml)
 
 A security-hardened webhook receiver pattern in TypeScript, extracted from production systems I run. Five defenses, each with tests. The fourth one is why this repo exists.
 
