@@ -1,13 +1,18 @@
 {
   "name": "webhook-guard",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "0.1.0",
+  "description": "A security-hardened webhook receiver: signature verification, idempotent delivery handling, and value-matching credential redaction before anything touches disk.",
+  "license": "MIT",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs"
+  "devDependencies": {
+    "typescript": "*",
+    "vitest": "*",
+    "@types/node": "*",
+    "tsx": "*"
+  }
 }
