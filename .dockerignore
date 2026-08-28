@@ -1,0 +1,32 @@
+# What is listed here never enters the build context, and a file that cannot
+# enter the build context cannot be COPYed into a layer — not by the Dockerfile
+# as written, and not by a later edit that widens a COPY. For a repository whose
+# subject is credentials ending up on disk, that is the first line: no .env, no
+# archive, no logs, whatever they happen to contain today.
+
+# Secrets and local configuration
+.env
+.env.*
+
+# The payload archive and dedup store a local run leaves behind
+storage/
+
+# Logs
+*.log
+coverage/
+
+# Installed and built artefacts: the image installs from the lockfile and
+# compiles from src/ itself, so host copies would only be stale or wrong-platform.
+node_modules/
+dist/
+
+# Not part of the program
+.git/
+.github/
+.claude/
+.gitignore
+.dockerignore
+Dockerfile
+README.md
+LICENSE
+.DS_Store

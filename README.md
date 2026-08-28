@@ -37,6 +37,12 @@ Ad-hoc debug printing is how secrets leak: someone logs a payload to chase a bug
     npm install
     npm test
     npx tsx src/audit-cli.ts storage/payloads 2026-08-19
+    WEBHOOK_SECRET=... npx tsx src/server.ts
+
+`src/server.ts` is the receiver process: `node:http` in front of the five modules, with every security decision left in them. It listens on 8080, takes `POST /webhook` with `x-webhook-signature` and `x-delivery-id` headers, and refuses to start without a signing secret — there is no default, because a default is a credential shipped in a layer. The Dockerfile keeps the same rule: no secret is an `ARG`, an `ENV`, or a file in the build context, and it only ever arrives through `-e` at run time. The `test` target carries the toolchain and runs the suite offline; the default target is just node plus the compiled receiver.
+
+    docker build --target test -t webhook-guard:test . && docker run --rm webhook-guard:test npm test
+    docker build -t webhook-guard . && docker run --rm -p 8080:8080 -e WEBHOOK_SECRET=... -v webhook-data:/data webhook-guard
 
 ## Scope
 
