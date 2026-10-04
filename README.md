@@ -44,6 +44,20 @@ Ad-hoc debug printing is how secrets leak: someone logs a payload to chase a bug
     docker build --target test -t webhook-guard:test . && docker run --rm webhook-guard:test npm test
     docker build -t webhook-guard . && docker run --rm -p 8080:8080 -e WEBHOOK_SECRET=... -v webhook-data:/data webhook-guard
 
+### Container image
+
+The runtime image is published to GHCR on every version tag, by a workflow whose gate runs the 68
+tests and the typecheck inside the test image first — the push step is unreachable unless both pass.
+
+    docker pull ghcr.io/adamabdo-xynora/webhook-guard:0.1.0
+    docker run --rm -p 8080:8080 -e WEBHOOK_SECRET=... ghcr.io/adamabdo-xynora/webhook-guard:0.1.0
+
+It runs the compiled receiver on port 8080: `GET /healthz` answers 200, and an unsigned
+`POST /webhook` answers 401 `missing signature header`. Run without `WEBHOOK_SECRET` it refuses to
+start and exits 1, which is the behaviour described above rather than a failure to configure. The
+image is node plus `dist/` — it has no `node_modules` at all, because the package declares no
+runtime dependencies. Published for `linux/amd64` and `linux/arm64`.
+
 ## Scope
 
 This is a pattern, not a framework: five small modules with no runtime dependencies, meant to be read and adapted. The tests are the specification.
