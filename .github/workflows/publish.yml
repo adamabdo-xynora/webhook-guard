@@ -13,6 +13,12 @@ on:
 permissions:
   contents: read
   packages: write
+  # Build provenance only. id-token mints the short-lived OIDC token that signs
+  # the attestation; attestations writes the signed statement to this
+  # repository. Both are scoped to this job alone — no other job in this repo
+  # gains either, and nothing here reads a repository secret.
+  id-token: write
+  attestations: write
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -56,7 +62,8 @@ jobs:
           labels: |
             org.opencontainers.image.description=A security-hardened webhook receiver: signature verification, idempotent delivery handling, and value-matching credential redaction before anything touches disk.
 
-      - uses: docker/build-push-action@v7
+      - id: push
+        uses: docker/build-push-action@v7
         with:
           context: .
           target: runtime
@@ -66,3 +73,16 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      # Signed provenance linking this exact digest to this workflow run and
+      # commit. It runs after the push because it attests what was pushed:
+      # subject-digest comes from the push step's own output rather than from
+      # anything recomputed here, so the attestation cannot describe a
+      # different image than the one in the registry. push-to-registry puts it
+      # alongside the image, so `gh attestation verify oci://...` can find it
+      # without this repository being consulted.
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: ghcr.io/adamabdo-xynora/${{ github.event.repository.name }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
