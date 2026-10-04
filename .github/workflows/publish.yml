@@ -1,0 +1,68 @@
+name: publish-image
+# Tag-triggered publish.
+#
+# The `test` stage ends at CMD ["npm", "test"], which runs nothing at build
+# time, but it also carries `RUN npx tsc --noEmit` — so a successful
+# `--target test` build proves the typecheck and nothing about the 68 tests.
+# The gate therefore builds the stage and then runs the suite through
+# `docker run`, as its own step with no pipe and no `|| true`, so a nonzero
+# exit fails the job directly.
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: read
+  packages: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+
+      # --load is required: under buildx the image otherwise stays in the
+      # builder cache and is invisible to `docker run`. No `platforms` here on
+      # purpose — the gate builds natively and runs the suite once rather than
+      # twice under QEMU.
+      - name: Build the test stage
+        run: docker build --target test --load -t ci-test .
+
+      - name: Run the test suite inside the image
+        run: docker run --rm ci-test npm test
+
+      # `npx tsc --noEmit`, not `npm run typecheck` — this repo has no
+      # typecheck script and no demo script; its scripts are build, test and
+      # test:watch. The test stage already enforces this as a RUN, so the step
+      # is belt-and-braces: it keeps the gate honest if that RUN is ever
+      # removed, and it lands in the run log as its own line.
+      - name: Typecheck inside the image
+        run: docker run --rm ci-test npx tsc --noEmit
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/adamabdo-xynora/${{ github.event.repository.name }}
+          # A release tag is immutable; `latest` would drift off it.
+          flavor: latest=false
+          tags: |
+            type=semver,pattern={{version}}
+            type=sha
+          labels: |
+            org.opencontainers.image.description=A security-hardened webhook receiver: signature verification, idempotent delivery handling, and value-matching credential redaction before anything touches disk.
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: runtime
+          # Both arches so the documented `docker pull` works on arm64 laptops
+          # without a --platform flag.
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
