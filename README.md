@@ -49,14 +49,22 @@ Ad-hoc debug printing is how secrets leak: someone logs a payload to chase a bug
 The runtime image is published to GHCR on every version tag, by a workflow whose gate runs the 68
 tests and the typecheck inside the test image first — the push step is unreachable unless both pass.
 
-    docker pull ghcr.io/adamabdo-xynora/webhook-guard:0.1.0
-    docker run --rm -p 8080:8080 -e WEBHOOK_SECRET=... ghcr.io/adamabdo-xynora/webhook-guard:0.1.0
+    docker pull ghcr.io/adamabdo-xynora/webhook-guard:0.1.1
+    docker run --rm -p 8080:8080 -e WEBHOOK_SECRET=... ghcr.io/adamabdo-xynora/webhook-guard:0.1.1
 
 It runs the compiled receiver on port 8080: `GET /healthz` answers 200, and an unsigned
 `POST /webhook` answers 401 `missing signature header`. Run without `WEBHOOK_SECRET` it refuses to
 start and exits 1, which is the behaviour described above rather than a failure to configure. The
 image is node plus `dist/` — it has no `node_modules` at all, because the package declares no
 runtime dependencies. Published for `linux/amd64` and `linux/arm64`.
+
+The image carries signed build provenance, so you can check that these bytes came from this
+repository's CI rather than from someone with push access to the registry:
+
+    gh attestation verify oci://ghcr.io/adamabdo-xynora/webhook-guard:0.1.1 --owner adamabdo-xynora
+
+`0.1.0` remains published, `linux/amd64` only and without an attestation. Its digest has not
+changed and will not: a version that alters its bytes is not a version.
 
 ## Scope
 
